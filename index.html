@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Half marathon tracker: April 24, 2027</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HM Tracker">
+<meta name="theme-color" content="#f4f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16191d" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f6f4;
+  --surface: #ffffff;
+  --ink: #23272e;
+  --muted: #5d6570;
+  --line: #d9ded9;
+  --lane: #1f5fa8;
+  --lane-soft: #dce7f4;
+  --done: #2f8a57;
+  --done-soft: #dcefe3;
+  --marker: #e2b23a;
+  --hard: #b5482f;
+  --bar-plan: #cfd6d2;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16191d; --surface: #1f2328; --ink: #e8eaec; --muted: #a2a9b2;
+    --line: #343a41; --lane: #6fa3e0; --lane-soft: #22344a; --done: #5cc08a;
+    --done-soft: #1f3a2b; --marker: #e8bd52; --hard: #e07a5f; --bar-plan: #3a4148;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16191d; --surface: #1f2328; --ink: #e8eaec; --muted: #a2a9b2;
+  --line: #343a41; --lane: #6fa3e0; --lane-soft: #22344a; --done: #5cc08a;
+  --done-soft: #1f3a2b; --marker: #e8bd52; --hard: #e07a5f; --bar-plan: #3a4148;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px; line-height: 1.5;
+}
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1, h2, .num { font-family: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif; }
+h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 8px 0 0; }
+.countdown { display: flex; gap: 28px; flex-wrap: wrap; margin: 22px 0 8px; }
+.countdown div { display: flex; flex-direction: column; }
+.countdown .num { font-size: 2.1rem; font-weight: 600; line-height: 1; }
+.countdown span:last-child { color: var(--muted); font-size: 0.9rem; }
+
+/* Mileage profile: the memorable element */
+.profile { margin: 26px 0 6px; }
+.profile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.profile h2 { font-size: 1.35rem; margin: 0; font-weight: 600; }
+.legend { color: var(--muted); font-size: 0.85rem; display: flex; gap: 14px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart-wrap { overflow-x: auto; }
+svg.chart { display: block; width: 100%; min-width: 520px; height: auto; }
+svg.chart .bar { cursor: pointer; }
+svg.chart .bar:focus { outline: none; }
+svg.chart .bar:focus-visible rect.plan { stroke: var(--lane); stroke-width: 2; }
+svg.chart text { font-family: "Barlow Condensed", system-ui, sans-serif; fill: var(--muted); font-size: 11px; }
+svg.chart text.phase { font-size: 12px; fill: var(--ink); }
+
+/* Weeks */
+.weeks { margin-top: 28px; display: flex; flex-direction: column; gap: 10px; }
+.week { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.week.current { border-color: var(--lane); box-shadow: inset 4px 0 0 var(--lane); }
+.week summary {
+  list-style: none; cursor: pointer; padding: 14px 16px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center;
+}
+.week summary::-webkit-details-marker { display: none; }
+.week summary:focus-visible { outline: 2px solid var(--lane); outline-offset: 2px; border-radius: 10px; }
+.wk-num { font-family: "Barlow Condensed", system-ui, sans-serif; font-size: 1.7rem; font-weight: 700; width: 2.2ch; text-align: right; line-height: 1; }
+.wk-title { font-weight: 600; }
+.wk-meta { color: var(--muted); font-size: 0.88rem; }
+.wk-progress { font-family: "Barlow Condensed", system-ui, sans-serif; font-size: 1.05rem; color: var(--muted); white-space: nowrap; }
+.week.complete .wk-progress { color: var(--done); }
+.tag { display: inline-block; font-size: 0.75rem; padding: 1px 8px; border-radius: 99px; background: var(--lane-soft); color: var(--lane); margin-left: 6px; font-weight: 500; vertical-align: 1px; }
+.tag.cut { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.tag.race { background: var(--marker); color: #23272e; }
+
+.sessions { padding: 0 16px 14px; display: flex; flex-direction: column; }
+.session { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.session input[type="checkbox"] { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--done); cursor: pointer; }
+.session label { cursor: pointer; }
+.s-day { font-weight: 600; }
+.s-day .mi { font-family: "Barlow Condensed", system-ui, sans-serif; font-weight: 600; color: var(--lane); margin-left: 6px; }
+.s-desc { color: var(--muted); font-size: 0.93rem; }
+.session.kb .s-day { font-weight: 500; }
+.session.is-done .s-desc { text-decoration: line-through; text-decoration-color: var(--line); }
+.feel { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.feel button {
+  font: inherit; font-size: 0.82rem; padding: 3px 10px; border-radius: 99px;
+  border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer;
+}
+.feel button[aria-pressed="true"][data-v="easy"] { background: var(--done-soft); color: var(--done); border-color: var(--done); }
+.feel button[aria-pressed="true"][data-v="right"] { background: var(--lane-soft); color: var(--lane); border-color: var(--lane); }
+.feel button[aria-pressed="true"][data-v="hard"] { border-color: var(--hard); color: var(--hard); }
+.feel button:focus-visible { outline: 2px solid var(--lane); outline-offset: 1px; }
+.note { margin-top: 10px; }
+.note textarea {
+  width: 100%; min-height: 56px; resize: vertical; font: inherit; font-size: 0.93rem;
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); color: var(--ink);
+}
+.note textarea:focus-visible { outline: 2px solid var(--lane); outline-offset: 1px; }
+
+details.paces { margin-top: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.paces summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+.pace-table { overflow-x: auto; padding: 0 16px 14px; }
+.pace-table table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+.pace-table th, .pace-table td { text-align: left; padding: 7px 10px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.pace-table th { font-weight: 600; }
+.pace-table td.num { font-size: 1.05rem; white-space: nowrap; }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+.status { color: var(--muted); font-size: 0.85rem; }
+.btn { font: inherit; font-size: 0.9rem; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn:focus-visible { outline: 2px solid var(--lane); outline-offset: 2px; }
+.btn.danger { color: var(--hard); }
+@media (prefers-reduced-motion: no-preference) {
+  svg.chart rect.fill { transition: height 0.35s ease, y 0.35s ease; }
+}
+@media (max-width: 480px) {
+  .countdown { gap: 20px; }
+  .legend { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>13.1 miles on April 24</h1>
+    <p class="sub">Goal: 12:30 per mile, about 2:43:45. Three runs and two kettlebell sessions a week.</p>
+    <div class="countdown" aria-live="polite">
+      <div><span class="num" id="days">–</span><span>days to race</span></div>
+      <div><span class="num" id="miles">–</span><span>miles run</span></div>
+      <div><span class="num" id="runs">–</span><span>runs done</span></div>
+      <div><span class="num" id="kb">–</span><span>strength sessions</span></div>
+    </div>
+  </header>
+
+  <section class="profile" aria-labelledby="profile-title">
+    <div class="profile-head">
+      <h2 id="profile-title">Weekly miles</h2>
+      <div class="legend"><span><i style="background:var(--bar-plan)"></i>Planned</span><span><i style="background:var(--done)"></i>Run</span></div>
+    </div>
+    <div class="chart-wrap"><svg class="chart" id="chart" role="img" aria-label="Planned and completed miles for each of the 26 weeks"></svg></div>
+  </section>
+
+  <div class="toolbar">
+    <button class="btn" id="jump" type="button">Go to this week</button>
+    <span class="status" id="status">Progress is saved on this device. Download a backup now and then.</span>
+  </div>
+
+  <section class="weeks" id="weeks" aria-label="Training weeks"></section>
+
+  <details class="paces">
+    <summary>Training paces</summary>
+    <div class="pace-table">
+      <table>
+        <thead><tr><th>Effort</th><th>Pace (min/mile)</th><th>How it feels</th></tr></thead>
+        <tbody>
+          <tr><td>Easy</td><td class="num">13:30–14:30</td><td>Full sentences; walk breaks are fine</td></tr>
+          <tr><td>Goal half pace</td><td class="num">12:30</td><td>Steady and controlled; short phrases</td></tr>
+          <tr><td>Tempo</td><td class="num">11:15–11:30</td><td>Comfortably hard; a few words at a time</td></tr>
+          <tr><td>Interval</td><td class="num">10:15–10:30</td><td>Hard; you’re glad each rep ends</td></tr>
+          <tr><td>Strides</td><td class="num">Fast, relaxed</td><td>20 seconds quick and smooth, then walk back</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="toolbar">
+    <span class="status">Kettlebell A: swings, goblet squats, single-leg deadlifts, reverse lunges, suitcase carries, dead bugs. Kettlebell B: rows, half-kneeling press, get-ups, calf raises, side planks, hip mobility.</span>
+  </div>
+  <div class="toolbar">
+    <span>
+      <button class="btn" id="backup" type="button">Download backup</button>
+      <button class="btn" id="restore" type="button">Restore backup</button>
+      <input type="file" id="restore-file" accept=".json,application/json" hidden>
+    </span>
+    <button class="btn danger" id="reset" type="button">Clear all progress</button>
+  </div>
+</main>
+
+<script>
+// ---------- Plan data ----------
+// Each week: [Monday miles, Wednesday miles, Wednesday workout, Saturday miles, Saturday note, tag]
+const PLAN = [
+  [2, 2, "Easy + 4 strides", 3, "Easy", ""],
+  [2.5, 2.5, "Easy + 4 strides", 3.5, "Easy", ""],
+  [3, 2.5, "Easy + 6 strides", 4, "Easy", ""],
+  [2, 2, "Easy + 4 strides", 3, "Easy", "cutback"],
+  [3, 3, "Fartlek: 6 × 1 min brisk / 2 min easy", 4.5, "Easy", ""],
+  [3, 3, "Fartlek: 6 × 1:30 brisk / 2 min easy", 5, "Easy", ""],
+  [3.5, 3.5, "Fartlek: 5 × 2 min brisk / 2 min easy", 5.5, "Easy", ""],
+  [3, 3, "Easy + 6 strides", 4, "Easy", "cutback"],
+  [3.5, 3.5, "Fartlek: 6 × 2 min brisk / 2 min easy", 6, "Easy", ""],
+  [3.5, 3, "Easy + 6 strides", 5, "Easy", "cutback"],
+  [3.5, 4, "Tempo: 2 × 8 min, 2 min jog between", 6.5, "Easy", ""],
+  [4, 4.5, "Intervals: 6 × 3 min, 2 min jog", 7, "Easy", ""],
+  [4, 4.5, "Tempo: 2 × 10 min, 2 min jog", 7.5, "Easy", ""],
+  [3, 3.5, "Easy + 6 strides", 5.5, "Easy", "cutback"],
+  [4, 5, "Intervals: 5 × 4 min, 2 min jog", 8, "Easy; practice fueling", ""],
+  [4, 5, "Tempo: 20 min continuous", 8.5, "Easy; practice fueling", ""],
+  [3.5, 3, "Easy + 4 strides", 5, "1 mi easy, 5K time trial, 1 mi easy", "time trial"],
+  [4, 5, "Tempo: 3 × 1 mi, 3 min jog", 9, "Easy", ""],
+  [4, 5, "Intervals: 6 × 4 min, 2 min jog", 9.5, "Last 2 mi at goal pace", ""],
+  [4.5, 5.5, "Tempo: 2 × 15 min, 3 min jog", 10, "Easy", ""],
+  [3.5, 4, "Easy + 6 strides", 7, "Middle 3 mi at goal pace", "cutback"],
+  [4.5, 5.5, "Tempo: 4 × 1 mi, 2 min jog", 11, "Last 3 mi at goal pace", ""],
+  [4.5, 5, "Tempo: 25 min continuous", 12, "Easy, longest run", "peak"],
+  [4, 5, "Goal pace: 2 × 1.5 mi, 3 min jog", 10, "Easy", "taper"],
+  [3.5, 4, "Tempo: 2 × 1 mi, 3 min jog", 6, "Last 2 mi at goal pace", "taper"],
+  [3, 2.5, "Easy with 3 × 3 min at goal pace", 13.1, "Race day. Start at 12:30, not faster.", "race"]
+];
+const PHASES = [
+  { name: "Base", from: 1, to: 10 },
+  { name: "Build", from: 11, to: 18 },
+  { name: "Race-specific", from: 19, to: 23 },
+  { name: "Taper", from: 24, to: 26 }
+];
+const START = new Date(2026, 9, 26);   // Monday, Oct 26, 2026 (months are 0-based)
+const RACE = new Date(2027, 3, 24);    // Saturday, Apr 24, 2027
+
+// Builds the list of sessions for one week, including kettlebell days.
+function sessionsFor(w) {
+  const [mon, wed, wedDesc, sat, satDesc] = PLAN[w - 1];
+  const list = [
+    { id: `w${w}-mon`, day: "Monday", miles: w === 26 ? 3 : mon, desc: w === 26 ? "Easy + 4 strides" : "Easy", run: true },
+    { id: `w${w}-tue`, day: "Tuesday", desc: "Kettlebell A: lower body and core", kb: true },
+    { id: `w${w}-wed`, day: "Wednesday", miles: wed, desc: wedDesc, run: true },
+    { id: `w${w}-thu`, day: "Thursday", desc: "Kettlebell B: upper body, core, mobility", kb: true },
+    { id: `w${w}-sat`, day: w === 26 ? "Saturday: race" : "Saturday", miles: sat, desc: satDesc, run: true }
+  ];
+  if (w <= 4) list.forEach(s => { if (s.kb) s.desc += " (2 sets, lighter weight)"; });
+  if (w === 24) list.forEach(s => { if (s.kb) s.desc += " (2 sets)"; });
+  if (w === 25) return list.filter(s => s.id !== `w${w}-tue`).map(s => s.kb ? { ...s, desc: s.desc + " (2 sets)" } : s);
+  if (w === 26) return list.filter(s => !s.kb);
+  return list;
+}
+const weekStart = w => new Date(START.getFullYear(), START.getMonth(), START.getDate() + (w - 1) * 7);
+const fmt = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const phaseOf = w => PHASES.find(p => w >= p.from && w <= p.to).name;
+const weekMiles = w => sessionsFor(w).filter(s => s.run).reduce((a, s) => a + s.miles, 0);
+
+function currentWeek() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today - START) / 86400000);
+  return Math.min(26, Math.max(1, Math.floor(diff / 7) + 1));
+}
+
+// ---------- State and saving ----------
+// state.done[id] = true, state.feel[id] = "easy" | "right" | "hard", state.notes[week] = text
+let state = { done: {}, feel: {}, notes: {} };
+const LS_KEY = "hm2027-progress";
+function setStatus(t) { document.getElementById("status").textContent = t; }
+function normalize(s) {
+  return { done: (s && s.done) || {}, feel: (s && s.feel) || {}, notes: (s && s.notes) || {} };
+}
+// Load saved progress from this browser, if any.
+try { const raw = localStorage.getItem(LS_KEY); if (raw) state = normalize(JSON.parse(raw)); } catch (e) {}
+
+// Save progress to this browser. localStorage only holds text, so the state object is turned into JSON.
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch (e) { setStatus("This browser blocked saving. Open the file in Safari or Chrome instead of a file preview."); }
+}
+
+// Backup: package the state as a .json file and hand it to the browser to download.
+document.getElementById("backup").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "half-marathon-progress-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setStatus("Backup downloaded.");
+});
+
+// Restore: read a chosen backup file and replace the current progress with it.
+document.getElementById("restore").addEventListener("click", () => document.getElementById("restore-file").click());
+document.getElementById("restore-file").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      state = normalize(JSON.parse(reader.result));
+      save(); render();
+      setStatus("Backup restored.");
+    } catch (err) { setStatus("That file isn’t a tracker backup. Choose the .json file you downloaded."); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+// ---------- Rendering ----------
+function renderChart() {
+  const svg = document.getElementById("chart");
+  const W = 720, H = 210, padL = 28, padB = 40, padT = 26, maxMi = 22;
+  const colW = (W - padL) / 26, barW = colW * 0.62;
+  const y = mi => padT + (H - padT - padB) * (1 - mi / maxMi);
+  let out = `<rect width="${W}" height="${H}" fill="none"/>`;
+  [5, 10, 15, 20].forEach(v => {
+    out += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    out += `<text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  });
+  const cw = currentWeek();
+  for (let w = 1; w <= 26; w++) {
+    const plan = weekMiles(w);
+    const runDone = sessionsFor(w).filter(s => s.run && state.done[s.id]).reduce((a, s) => a + s.miles, 0);
+    const x = padL + (w - 1) * colW + (colW - barW) / 2;
+    out += `<g class="bar" tabindex="0" role="button" data-week="${w}" aria-label="Week ${w}: ${runDone} of ${plan} miles">`;
+    out += `<title>Week ${w}: ${runDone} of ${plan} miles</title>`;
+    out += `<rect class="plan" x="${x}" y="${y(plan)}" width="${barW}" height="${y(0) - y(plan)}" rx="2" fill="${w === 26 ? "var(--marker)" : "var(--bar-plan)"}"/>`;
+    out += `<rect class="fill" x="${x}" y="${y(runDone)}" width="${barW}" height="${y(0) - y(runDone)}" rx="2" fill="var(--done)"/>`;
+    if (w === cw) out += `<circle cx="${x + barW / 2}" cy="${y(0) + 9}" r="3" fill="var(--lane)"/>`;
+    if (w % 2 === 1 || w === 26) out += `<text x="${x + barW / 2}" y="${y(0) + 22}" text-anchor="middle">${w}</text>`;
+    out += `</g>`;
+  }
+  PHASES.forEach(p => {
+    const x1 = padL + (p.from - 1) * colW + 2, x2 = padL + p.to * colW - 2;
+    out += `<line x1="${x1}" x2="${x2}" y1="10" y2="10" stroke="var(--lane)" stroke-width="2"/>`;
+    out += `<text class="phase" x="${x1}" y="22">${p.name}</text>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+  svg.querySelectorAll(".bar").forEach(g => {
+    const go = () => openWeek(+g.dataset.week);
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+}
+
+function renderStats() {
+  let miles = 0, runs = 0, kb = 0;
+  for (let w = 1; w <= 26; w++) sessionsFor(w).forEach(s => {
+    if (!state.done[s.id]) return;
+    if (s.run) { runs++; miles += s.miles; } else kb++;
+  });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  document.getElementById("days").textContent = Math.max(0, Math.round((RACE - today) / 86400000));
+  document.getElementById("miles").textContent = Math.round(miles * 10) / 10;
+  document.getElementById("runs").textContent = runs;
+  document.getElementById("kb").textContent = kb;
+}
+
+function weekSummaryHTML(w, sessions) {
+  const d = weekStart(w), end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 6);
+  const tag = PLAN[w - 1][5];
+  const tagHTML = tag ? `<span class="tag ${tag === "cutback" ? "cut" : tag === "race" ? "race" : ""}">${tag}</span>` : "";
+  const doneCount = sessions.filter(s => state.done[s.id]).length;
+  return `<span class="wk-num">${w}</span>
+    <span><span class="wk-title">${phaseOf(w)}${tagHTML}</span><br>
+    <span class="wk-meta">${fmt(d)} – ${fmt(end)}, ${weekMiles(w)} miles</span></span>
+    <span class="wk-progress">${doneCount} of ${sessions.length}</span>`;
+}
+
+function render() {
+  const container = document.getElementById("weeks");
+  const openWeeks = new Set([...container.querySelectorAll("details[open]")].map(d => +d.dataset.week));
+  const cw = currentWeek();
+  if (!container.children.length) openWeeks.add(cw);
+  container.innerHTML = "";
+  for (let w = 1; w <= 26; w++) {
+    const sessions = sessionsFor(w);
+    const det = document.createElement("details");
+    det.className = "week" + (w === cw ? " current" : "") + (sessions.every(s => state.done[s.id]) ? " complete" : "");
+    det.dataset.week = w; det.id = "week-" + w;
+    if (openWeeks.has(w)) det.open = true;
+    det.innerHTML = `<summary>${weekSummaryHTML(w, sessions)}</summary><div class="sessions"></div>`;
+    const box = det.querySelector(".sessions");
+    sessions.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "session" + (s.kb ? " kb" : "") + (state.done[s.id] ? " is-done" : "");
+      const miles = s.run ? `<span class="mi">${s.miles} mi</span>` : "";
+      row.innerHTML = `<input type="checkbox" id="${s.id}" ${state.done[s.id] ? "checked" : ""}>
+        <div><label for="${s.id}"><span class="s-day">${s.day}${miles}</span><br><span class="s-desc"></span></label>
+        ${s.run ? `<div class="feel" role="group" aria-label="How did it feel?">
+          ${["easy", "right", "hard"].map(v => `<button type="button" data-v="${v}" aria-pressed="${state.feel[s.id] === v}">${v === "right" ? "About right" : v === "easy" ? "Easy" : "Too hard"}</button>`).join("")}
+        </div>` : ""}</div>`;
+      row.querySelector(".s-desc").textContent = s.desc;
+      row.querySelector("input").addEventListener("change", e => {
+        if (e.target.checked) state.done[s.id] = true; else delete state.done[s.id];
+        save(); render();
+      });
+      row.querySelectorAll(".feel button").forEach(b => b.addEventListener("click", () => {
+        state.feel[s.id] = state.feel[s.id] === b.dataset.v ? undefined : b.dataset.v;
+        if (!state.feel[s.id]) delete state.feel[s.id];
+        save(); render();
+      }));
+      box.appendChild(row);
+    });
+    const note = document.createElement("div");
+    note.className = "note";
+    note.innerHTML = `<textarea aria-label="Notes for week ${w}" placeholder="Notes: weather, how your legs felt, anything to tell your coach"></textarea>`;
+    const ta = note.querySelector("textarea");
+    ta.value = state.notes[w] || "";
+    ta.addEventListener("input", () => { state.notes[w] = ta.value; save(); });
+    box.appendChild(note);
+    container.appendChild(det);
+  }
+  renderChart(); renderStats();
+}
+
+function openWeek(w) {
+  const el = document.getElementById("week-" + w);
+  if (!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+document.getElementById("jump").addEventListener("click", () => openWeek(currentWeek()));
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Clear every checkmark, rating and note? This can’t be undone.")) return;
+  state = { done: {}, feel: {}, notes: {} };
+  save(); render();
+});
+render();
+</script>
+</body>
+</html>
